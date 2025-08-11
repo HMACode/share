@@ -7,10 +7,10 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 APP_DIR="$BASE_DIR/app"
 LOG_DIR="$BASE_DIR/log"
 CONF_DIR="$BASE_DIR/conf"
-PID_FILE="$BASE_DIR/hermes_app.pid"
+PID_FILE="$BASE_DIR/java_app.pid"
 
-APP_NAME="hermes_app"
-JAR_PATTERN="hermes_app-*.jar"
+APP_NAME="java_app"
+JAR_PATTERN="java_app-*.jar"
 CONFIG_FILE="$CONF_DIR/application.properties"
 LOG4J_CONFIG="$CONF_DIR/log4j2.xml"
 
@@ -152,7 +152,7 @@ start_app() {
     log_info "Log Directory: $LOG_DIR"
     
     # Start the application in background
-    nohup java $jvm_args -jar "$jar_file" > "$LOG_DIR/hermes_app.stdout" 2>&1 &
+    nohup java $jvm_args -jar "$jar_file" > "$LOG_DIR/java_app.stdout" 2>&1 &
     local pid=$!
     
     # Save PID

@@ -4,8 +4,8 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
-PID_FILE="$BASE_DIR/hermes_app.pid"
-APP_NAME="hermes_app"
+PID_FILE="$BASE_DIR/java_app.pid"
+APP_NAME="java_app"
 
 # Colors for output
 RED='\033[0;31m'

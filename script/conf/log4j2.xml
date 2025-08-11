@@ -16,8 +16,8 @@
         </Console>
 
         <!-- File appender for stdout redirection -->
-        <RollingFile name="StdoutFile" fileName="${LOG_DIR}/hermes_app.stdout" 
-                     filePattern="${LOG_DIR}/hermes_app.stdout.%d{yyyy-MM-dd}">
+        <RollingFile name="StdoutFile" fileName="${LOG_DIR}/java_app.stdout" 
+                     filePattern="${LOG_DIR}/java_app.stdout.%d{yyyy-MM-dd}">
             <PatternLayout pattern="${STDOUT_PATTERN}"/>
             <Policies>
                 <!-- Roll over daily at midnight -->
@@ -26,7 +26,7 @@
             <DefaultRolloverStrategy max="30" compressionLevel="9">
                 <!-- Keep logs for 30 days -->
                 <Delete basePath="${LOG_DIR}" maxDepth="1">
-                    <IfFileName glob="hermes_app.stdout.*" />
+                    <IfFileName glob="java_app.stdout.*" />
                     <IfLastModified age="30d" />
                 </Delete>
             </DefaultRolloverStrategy>
@@ -52,8 +52,8 @@
         </RollingFile>
 
         <!-- General application log file -->
-        <RollingFile name="AppFile" fileName="${LOG_DIR}/hermes_app.log" 
-                     filePattern="${LOG_DIR}/hermes_app.log.%d{yyyy-MM-dd}">
+        <RollingFile name="AppFile" fileName="${LOG_DIR}/java_app.log" 
+                     filePattern="${LOG_DIR}/java_app.log.%d{yyyy-MM-dd}">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <!-- Roll over daily at midnight -->
@@ -64,15 +64,15 @@
             <DefaultRolloverStrategy max="30" compressionLevel="9">
                 <!-- Keep logs for 30 days -->
                 <Delete basePath="${LOG_DIR}" maxDepth="1">
-                    <IfFileName glob="hermes_app.log.*" />
+                    <IfFileName glob="java_app.log.*" />
                     <IfLastModified age="30d" />
                 </Delete>
             </DefaultRolloverStrategy>
         </RollingFile>
 
         <!-- Error log file for ERROR and FATAL levels only -->
-        <RollingFile name="ErrorFile" fileName="${LOG_DIR}/hermes_app-error.log" 
-                     filePattern="${LOG_DIR}/hermes_app-error.log.%d{yyyy-MM-dd}">
+        <RollingFile name="ErrorFile" fileName="${LOG_DIR}/java_app-error.log" 
+                     filePattern="${LOG_DIR}/java_app-error.log.%d{yyyy-MM-dd}">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
             <Policies>
@@ -81,7 +81,7 @@
             </Policies>
             <DefaultRolloverStrategy max="30" compressionLevel="9">
                 <Delete basePath="${LOG_DIR}" maxDepth="1">
-                    <IfFileName glob="hermes_app-error.log.*" />
+                    <IfFileName glob="java_app-error.log.*" />
                     <IfLastModified age="30d" />
                 </Delete>
             </DefaultRolloverStrategy>
