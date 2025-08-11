@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <!-- Log directory property, can be overridden by system property -->
+        <Property name="LOG_DIR">${sys:app.log.dir:-logs}</Property>
+        <!-- Log pattern for file appenders -->
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+        <!-- Log pattern for stdout -->
+        <Property name="STDOUT_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Console appender for stdout -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${STDOUT_PATTERN}"/>
+        </Console>
+
+        <!-- File appender for stdout redirection -->
+        <RollingFile name="StdoutFile" fileName="${LOG_DIR}/hermes_app.stdout" 
+                     filePattern="${LOG_DIR}/hermes_app.stdout.%d{yyyy-MM-dd}">
+            <PatternLayout pattern="${STDOUT_PATTERN}"/>
+            <Policies>
+                <!-- Roll over daily at midnight -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30" compressionLevel="9">
+                <!-- Keep logs for 30 days -->
+                <Delete basePath="${LOG_DIR}" maxDepth="1">
+                    <IfFileName glob="hermes_app.stdout.*" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <!-- File appender for com.bnm.rum package -->
+        <RollingFile name="BnpAppFile" fileName="${LOG_DIR}/log-bnp.log" 
+                     filePattern="${LOG_DIR}/log-bnp.log.%d{yyyy-MM-dd}">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <!-- Roll over daily at midnight -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <!-- Roll over when file reaches 10MB -->
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30" compressionLevel="9">
+                <!-- Keep logs for 30 days -->
+                <Delete basePath="${LOG_DIR}" maxDepth="1">
+                    <IfFileName glob="log-bnp.log.*" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <!-- General application log file -->
+        <RollingFile name="AppFile" fileName="${LOG_DIR}/hermes_app.log" 
+                     filePattern="${LOG_DIR}/hermes_app.log.%d{yyyy-MM-dd}">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <!-- Roll over daily at midnight -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <!-- Roll over when file reaches 50MB -->
+                <SizeBasedTriggeringPolicy size="50MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30" compressionLevel="9">
+                <!-- Keep logs for 30 days -->
+                <Delete basePath="${LOG_DIR}" maxDepth="1">
+                    <IfFileName glob="hermes_app.log.*" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <!-- Error log file for ERROR and FATAL levels only -->
+        <RollingFile name="ErrorFile" fileName="${LOG_DIR}/hermes_app-error.log" 
+                     filePattern="${LOG_DIR}/hermes_app-error.log.%d{yyyy-MM-dd}">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30" compressionLevel="9">
+                <Delete basePath="${LOG_DIR}" maxDepth="1">
+                    <IfFileName glob="hermes_app-error.log.*" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- Logger specifically for com.bnm.rum package -->
+        <Logger name="com.bnm.rum" level="DEBUG" additivity="false">
+            <AppenderRef ref="BnpAppFile"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Spring framework loggers -->
+        <Logger name="org.springframework" level="INFO" additivity="false">
+            <AppenderRef ref="AppFile"/>
+        </Logger>
+
+        <!-- Hibernate/JPA loggers -->
+        <Logger name="org.hibernate" level="WARN" additivity="false">
+            <AppenderRef ref="AppFile"/>
+        </Logger>
+
+        <!-- HTTP client loggers -->
+        <Logger name="org.apache.http" level="WARN" additivity="false">
+            <AppenderRef ref="AppFile"/>
+        </Logger>
+
+        <!-- Tomcat loggers -->
+        <Logger name="org.apache.catalina" level="INFO" additivity="false">
+            <AppenderRef ref="AppFile"/>
+        </Logger>
+
+        <!-- Root logger - catches all other loggers -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AppFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
