@@ -7,12 +7,11 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 APP_DIR="$BASE_DIR/app"
 LOG_DIR="$BASE_DIR/log"
 CONF_DIR="$BASE_DIR/conf"
-PID_FILE="$BASE_DIR/java_app.pid"
+PID_FILE="$BASE_DIR/hermes_app.pid"
 
-APP_NAME="java_app"
-JAR_PATTERN="java_app-*.jar"
+APP_NAME="hermes_app"
+JAR_PATTERN="hermes_app-*.jar"
 CONFIG_FILE="$CONF_DIR/application.properties"
-LOG4J_CONFIG="$CONF_DIR/log4j2.xml"
 
 # Colors for output
 RED='\033[0;31m'
@@ -130,29 +129,21 @@ start_app() {
         return 1
     fi
     
-    if [ ! -f "$LOG4J_CONFIG" ]; then
-        log_error "Log4j configuration file not found: $LOG4J_CONFIG"
-        return 1
-    fi
-    
     # Create log directory if it doesn't exist
     mkdir -p "$LOG_DIR"
     
     # Prepare JVM arguments
     local jvm_args="-server"
     jvm_args="$jvm_args -Xms512m -Xmx1024m"
-    jvm_args="$jvm_args -Dlogging.config=file:$LOG4J_CONFIG"
     jvm_args="$jvm_args -Dspring.config.location=file:$CONFIG_FILE"
-    jvm_args="$jvm_args -Dapp.log.dir=$LOG_DIR"
     
     log_info "Starting $APP_NAME..."
     log_info "JAR: $(basename "$jar_file")"
     log_info "Config: $CONFIG_FILE"
-    log_info "Log Config: $LOG4J_CONFIG"
     log_info "Log Directory: $LOG_DIR"
     
     # Start the application in background
-    nohup java $jvm_args -jar "$jar_file" > "$LOG_DIR/java_app.stdout" 2>&1 &
+    nohup java $jvm_args -jar "$jar_file" > "$LOG_DIR/hermes_app.stdout" 2>&1 &
     local pid=$!
     
     # Save PID

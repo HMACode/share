@@ -7,10 +7,10 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 APP_DIR="$BASE_DIR/app"
 LOG_DIR="$BASE_DIR/log"
 CONF_DIR="$BASE_DIR/conf"
-PID_FILE="$BASE_DIR/java_app.pid"
+PID_FILE="$BASE_DIR/hermes_app.pid"
 
-APP_NAME="java_app"
-JAR_PATTERN="java_app-*.jar"
+APP_NAME="hermes_app"
+JAR_PATTERN="hermes_app-*.jar"
 
 # Colors for output
 RED='\033[0;31m'
@@ -93,24 +93,17 @@ get_jar_info() {
 # Function to check configuration files
 check_config() {
     local config_file="$CONF_DIR/application.properties"
-    local log4j_file="$CONF_DIR/log4j2.xml"
     
     if [ -f "$config_file" ]; then
         log_detail "Config file: ✓ application.properties"
     else
         log_error "Config file: ✗ application.properties (missing)"
     fi
-    
-    if [ -f "$log4j_file" ]; then
-        log_detail "Log config: ✓ log4j2.xml"
-    else
-        log_error "Log config: ✗ log4j2.xml (missing)"
-    fi
 }
 
 # Function to show recent log entries
 show_recent_logs() {
-    local stdout_log="$LOG_DIR/java_app.stdout"
+    local stdout_log="$LOG_DIR/hermes_app.stdout"
     local app_log="$LOG_DIR/log-bnp.log"
     
     if [ -f "$stdout_log" ]; then
