@@ -1,0 +1,82 @@
+<div class="message-replay-container">
+  <div class="explanation-section">
+    <mat-card class="info-card">
+      <mat-card-content>
+        <p>
+          This message replay feature allows you to request a replay of messages using the currently selected filters 
+          to your destination of choice. You have the option to override the start or end date before requesting the replay.
+        </p>
+        <p>
+          <strong>Important:</strong> Once you submit a replay request, it will not be immediately executed. 
+          All replay requests are reviewed and executed by an admin user through a support ticket system.
+        </p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <form [formGroup]="replayForm" (ngSubmit)="onSubmit()" class="replay-form">
+    <div class="message-count-section">
+      <mat-card class="count-card">
+        <mat-card-content>
+          <div class="count-display">
+            <span class="count-label">Messages found:</span>
+            <span class="count-number">{{ currentMessageCount }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="form-fields">
+      <div class="date-section">
+        <div class="date-row">
+          <mat-form-field appearance="outline" class="date-field">
+            <mat-label>Start Date</mat-label>
+            <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+            <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+            <mat-datepicker #startPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="date-field">
+            <mat-label>End Date</mat-label>
+            <input matInput [matDatepicker]="endPicker" formControlName="endDate">
+            <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+            <mat-datepicker #endPicker></mat-datepicker>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <mat-form-field appearance="outline" class="destination-field">
+        <mat-label>Destination</mat-label>
+        <mat-select formControlName="destination">
+          <mat-option *ngFor="let option of destinationOptions" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="replayForm.get('destination')?.hasError('required')">
+          Destination is required
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="actions-section">
+      <button 
+        *ngIf="showRecomputeButton"
+        mat-stroked-button 
+        type="button" 
+        color="accent"
+        (click)="onRecompute()"
+        class="recompute-button">
+        Refresh Results
+      </button>
+
+      <button 
+        mat-raised-button 
+        color="primary" 
+        type="submit"
+        [disabled]="isSubmitDisabled"
+        class="submit-button">
+        Request Replay
+      </button>
+    </div>
+  </form>
+</div>
