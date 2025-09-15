@@ -1,100 +1,127 @@
+import { Component, OnInit } from '@angular/core';
+import { Observable } from 'rxjs';
+import { PageEvent } from '@angular/material/paginator';
 
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+interface Result {
+  total: number;
+  results: ReplayRequest[];
+}
 
-interface Filter {
-  startDate: Date;
-  endDate: Date;
+interface ReplayRequest {
+  requesterUid: string;
+  starterUid: string;
+  creationDate: string;
+  startDate: string;
+  flowType: string;
+  destination: string;
 }
 
 @Component({
-  selector: 'app-message-replay',
-  templateUrl: './message-replay.component.html',
-  styleUrls: ['./message-replay.component.scss']
-})
-export class MessageReplayComponent implements OnInit {
-  @Input() filter!: Filter;
-  @Input() initialMessageCount: number = 0;
-  @Output() recomputeRequested = new EventEmitter<{startDate: Date, endDate: Date}>();
-  @Output() submitRequested = new EventEmitter<{startDate: Date, endDate: Date, destination: string}>();
+  selector: 'app-paginated-table',
+  template: `
+    <div class="table-container">
+      <mat-table [dataSource]="dataSource" class="mat-elevation-4">
+        
+        <ng-container matColumnDef="requesterUid">
+          <mat-header-cell *matHeaderCellDef>Requester UID</mat-header-cell>
+          <mat-cell *matCellDef="let element">{{element.requesterUid}}</mat-cell>
+        </ng-container>
 
-  replayForm!: FormGroup;
-  currentMessageCount: number = 0;
-  hasDateChanged: boolean = false;
-  showRecomputeButton: boolean = false;
+        <ng-container matColumnDef="starterUid">
+          <mat-header-cell *matHeaderCellDef>Starter UID</mat-header-cell>
+          <mat-cell *matCellDef="let element">{{element.starterUid}}</mat-cell>
+        </ng-container>
 
-  destinationOptions: string[] = [
-    'Production Environment',
-    'Staging Environment',
-    'Development Environment',
-    'Test Environment',
-    'External System A',
-    'External System B'
-  ];
+        <ng-container matColumnDef="creationDate">
+          <mat-header-cell *matHeaderCellDef>Creation Date</mat-header-cell>
+          <mat-cell *matCellDef="let element">{{element.creationDate}}</mat-cell>
+        </ng-container>
 
-  constructor(private fb: FormBuilder) {}
+        <ng-container matColumnDef="startDate">
+          <mat-header-cell *matHeaderCellDef>Start Date</mat-header-cell>
+          <mat-cell *matCellDef="let element">{{element.startDate}}</mat-cell>
+        </ng-container>
 
-  ngOnInit() {
-    this.currentMessageCount = this.initialMessageCount;
-    this.initializeForm();
-    this.setupFormSubscriptions();
-  }
+        <ng-container matColumnDef="flowType">
+          <mat-header-cell *matHeaderCellDef>Flow Type</mat-header-cell>
+          <mat-cell *matCellDef="let element">{{element.flowType}}</mat-cell>
+        </ng-container>
 
-  private initializeForm() {
-    this.replayForm = this.fb.group({
-      startDate: [this.filter.startDate, Validators.required],
-      endDate: [this.filter.endDate, Validators.required],
-      destination: ['', Validators.required]
-    });
-  }
+        <ng-container matColumnDef="destination">
+          <mat-header-cell *matHeaderCellDef>Destination</mat-header-cell>
+          <mat-cell *matCellDef="let element">{{element.destination}}</mat-cell>
+        </ng-container>
 
-  private setupFormSubscriptions() {
-    this.replayForm.get('startDate')?.valueChanges.subscribe(() => {
-      this.checkDateChanges();
-    });
+        <ng-container matColumnDef="actions">
+          <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+          <mat-cell *matCellDef="let element">
+            <button mat-icon-button (click)="startAction(element)" matTooltip="Start replay request">
+              <mat-icon>play_arrow</mat-icon>
+            </button>
+            <button mat-icon-button (click)="deleteAction(element)" matTooltip="Delete replay request">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </mat-cell>
+        </ng-container>
 
-    this.replayForm.get('endDate')?.valueChanges.subscribe(() => {
-      this.checkDateChanges();
-    });
-  }
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+      </mat-table>
 
-  private checkDateChanges() {
-    const currentStartDate = this.replayForm.get('startDate')?.value;
-    const currentEndDate = this.replayForm.get('endDate')?.value;
-
-    this.hasDateChanged =
-      currentStartDate?.getTime() !== this.filter.startDate.getTime() ||
-      currentEndDate?.getTime() !== this.filter.endDate.getTime();
-
-    this.showRecomputeButton = this.hasDateChanged;
-  }
-
-  onRecompute() {
-    const formData = this.replayForm.value;
-    this.recomputeRequested.emit({
-      startDate: formData.startDate,
-      endDate: formData.endDate
-    });
-    this.hasDateChanged = false;
-    this.showRecomputeButton = false;
-  }
-
-  onSubmit() {
-    if (this.replayForm.valid && !this.hasDateChanged) {
-      const formData = this.replayForm.value;
-      this.submitRequested.emit({
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        destination: formData.destination
-      });
+      <mat-paginator 
+        [length]="totalResults" 
+        [pageSize]="pageSize" 
+        [pageSizeOptions]="pageSizeOptions"
+        (page)="onPageChange($event)"
+        showFirstLastButtons>
+      </mat-paginator>
+    </div>
+  `,
+  styles: [`
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
     }
+    
+    mat-table {
+      width: 100%;
+      min-width: 800px;
+    }
+  `]
+})
+export class PaginatedTableComponent implements OnInit {
+  displayedColumns: string[] = ['requesterUid', 'starterUid', 'creationDate', 'startDate', 'flowType', 'destination', 'actions'];
+  dataSource: ReplayRequest[] = [];
+  totalResults = 0;
+  pageSize = 10;
+  pageIndex = 0;
+  pageSizeOptions: number[] = [5, 10, 25, 50];
+
+  constructor(private service: any) {}
+
+  ngOnInit(): void {
+    this.loadData();
   }
 
-  get isSubmitDisabled(): boolean {
-    return !this.replayForm.valid || this.hasDateChanged;
+  loadData(): void {
+    const offset = this.pageIndex * this.pageSize;
+    this.service.searchReplayRequests(offset, this.pageSize).subscribe((result: Result) => {
+      this.dataSource = result.results;
+      this.totalResults = result.total;
+    });
   }
 
-  updateMessageCount(count: number) {
-    this.currentMessageCount = count;
+  onPageChange(event: PageEvent): void {
+    this.pageIndex = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.loadData();
+  }
+
+  startAction(element: ReplayRequest): void {
+    console.log('Start action for:', element);
+  }
+
+  deleteAction(element: ReplayRequest): void {
+    console.log('Delete action for:', element);
   }
 }
