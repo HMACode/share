@@ -33,9 +33,9 @@ import { Component } from '@angular/core';
               Override with UID
             </mat-slide-toggle>
           </div>
-          <mat-form-field appearance="outline" [disabled]="!useCustomUid">
+          <mat-form-field appearance="outline" *ngIf="useCustomUid">
             <mat-label>User ID</mat-label>
-            <input matInput [(ngModel)]="customUid" [disabled]="!useCustomUid">
+            <input matInput [(ngModel)]="customUid">
           </mat-form-field>
         </div>
 
@@ -50,9 +50,13 @@ import { Component } from '@angular/core';
               Override with Entitlements
             </mat-slide-toggle>
           </div>
-          <mat-form-field appearance="outline" [disabled]="!useCustomEntitlements">
-            <mat-label>Entitlements (comma separated)</mat-label>
-            <textarea matInput [(ngModel)]="customEntitlements" rows="3" [disabled]="!useCustomEntitlements"></textarea>
+          <mat-form-field appearance="outline" *ngIf="useCustomEntitlements">
+            <mat-label>Entitlements</mat-label>
+            <mat-select [(ngModel)]="selectedEntitlements" multiple>
+              <mat-option *ngFor="let entitlement of availableEntitlements" [value]="entitlement">
+                {{entitlement}}
+              </mat-option>
+            </mat-select>
           </mat-form-field>
         </div>
       </div>
@@ -158,12 +162,23 @@ export class ProfileOverrideComponent {
   useCustomUid = false;
   useCustomEntitlements = false;
   customUid = '';
-  customEntitlements = '';
+  selectedEntitlements: string[] = [];
+  
+  availableEntitlements = [
+    'READ_USERS',
+    'WRITE_USERS',
+    'DELETE_USERS',
+    'READ_REPORTS',
+    'WRITE_REPORTS',
+    'ADMIN_ACCESS',
+    'SYSTEM_CONFIG',
+    'AUDIT_LOGS'
+  ];
 
   onUidToggle() {
     if (this.useCustomUid) {
       this.useCustomEntitlements = false;
-      this.customEntitlements = '';
+      this.selectedEntitlements = [];
     }
   }
 
@@ -178,7 +193,7 @@ export class ProfileOverrideComponent {
     const formData = {
       overrideType: this.useCustomUid ? 'uid' : 'entitlements',
       customUid: this.useCustomUid ? this.customUid : null,
-      customEntitlements: this.useCustomEntitlements ? this.customEntitlements.split(',').map(e => e.trim()) : null,
+      selectedEntitlements: this.useCustomEntitlements ? this.selectedEntitlements : null,
       timestamp: new Date().toISOString()
     };
     
