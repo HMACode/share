@@ -1,0 +1,171 @@
+<div class="msg-detail-wrapper">
+
+  <div class="msg-header-panel">
+    <div class="panel-top-bar">
+      <div class="panel-title">
+        <span class="panel-label">Message Details</span>
+        <span class="ref-badge">{{ message.reference }}</span>
+      </div>
+      <div class="status-chip" [ngClass]="statusClass()">
+        <span class="status-dot"></span>
+        {{ message.status }}
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <div class="field-item">
+        <span class="field-label">Type</span>
+        <span class="field-value type-badge">{{ message.type }}</span>
+      </div>
+      <div class="field-item">
+        <span class="field-label">Flow</span>
+        <span class="field-value flow-badge" [ngClass]="message.flow === 'INBOUND' ? 'flow-in' : 'flow-out'">
+          <mat-icon class="flow-icon">{{ message.flow === 'INBOUND' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
+          {{ message.flow }}
+        </span>
+      </div>
+      <div class="field-item">
+        <span class="field-label">Reception Date</span>
+        <span class="field-value">{{ message.receptionDate }}</span>
+      </div>
+      <div class="field-item">
+        <span class="field-label">TRN</span>
+        <span class="field-value mono">{{ message.trn }}</span>
+      </div>
+      <div class="field-item">
+        <span class="field-label">Sender</span>
+        <span class="field-value mono">{{ message.sender }}</span>
+      </div>
+      <div class="field-item">
+        <span class="field-label">Receiver</span>
+        <span class="field-value mono">{{ message.receiver }}</span>
+      </div>
+      <div class="field-item">
+        <span class="field-label">Application</span>
+        <span class="field-value">{{ message.application }}</span>
+      </div>
+    </div>
+  </div>
+
+  <mat-tab-group class="msg-tabs" animationDuration="200ms" [disableRipple]="false">
+    <mat-tab label="Header">
+      <ng-template matTabContent>
+        <div class="tab-content">
+          <div class="section-title">Header Fields</div>
+          <div class="field-row">
+            <span class="row-label">Application Header</span>
+            <span class="row-value mono">I103BNPAFRPPXXXXN</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">Basic Header</span>
+            <span class="row-value mono">F01DEUTDEDBAXXX0001000001</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">User Header</span>
+            <span class="row-value mono">{103:}{113:xxxx}{108:MSGREF001}</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">Session Number</span>
+            <span class="row-value mono">0001</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">Sequence Number</span>
+            <span class="row-value mono">000001</span>
+          </div>
+        </div>
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab label="Body">
+      <ng-template matTabContent>
+        <div class="tab-content">
+          <div class="section-title">Message Body</div>
+          <div class="field-row">
+            <span class="row-label">:20: Transaction Reference</span>
+            <span class="row-value mono">{{ message.trn }}</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">:23B: Bank Operation Code</span>
+            <span class="row-value mono">CRED</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">:32A: Value Date / Currency / Amount</span>
+            <span class="row-value mono">240315EUR1500000,</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">:50K: Ordering Customer</span>
+            <span class="row-value mono">/DE89370400440532013000<br>JOHN DOE<br>MUSTERSTRASSE 1<br>60329 FRANKFURT</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">:59: Beneficiary Customer</span>
+            <span class="row-value mono">/FR7630006000011234567890189<br>JANE DUPONT<br>1 RUE DE LA PAIX<br>75001 PARIS</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">:70: Remittance Information</span>
+            <span class="row-value mono">INVOICE 2024-1234 PAYMENT</span>
+          </div>
+          <div class="field-row">
+            <span class="row-label">:71A: Details of Charges</span>
+            <span class="row-value mono">SHA</span>
+          </div>
+        </div>
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab label="NACK Details">
+      <ng-template matTabContent>
+        <div class="tab-content">
+          <div class="nack-empty">
+            <mat-icon class="nack-icon">check_circle_outline</mat-icon>
+            <span class="nack-label">No NACK details for this message</span>
+            <span class="nack-sub">This message was successfully acknowledged</span>
+          </div>
+        </div>
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab label="Activities">
+      <ng-template matTabContent>
+        <div class="tab-content">
+          <div class="section-title">Processing Timeline</div>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-marker done"></div>
+              <div class="timeline-content">
+                <div class="tl-time">2024-03-15 14:32:07</div>
+                <div class="tl-event">Message Received</div>
+                <div class="tl-detail">Received from SWIFT network via {{ message.application }}</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker done"></div>
+              <div class="timeline-content">
+                <div class="tl-time">2024-03-15 14:32:09</div>
+                <div class="tl-event">Format Validation</div>
+                <div class="tl-detail">MT103 schema validated successfully</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker done"></div>
+              <div class="timeline-content">
+                <div class="tl-time">2024-03-15 14:32:11</div>
+                <div class="tl-event">Compliance Check</div>
+                <div class="tl-detail">AML and sanctions screening passed</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker done"></div>
+              <div class="timeline-content">
+                <div class="tl-time">2024-03-15 14:32:45</div>
+                <div class="tl-event">Processing Complete</div>
+                <div class="tl-detail">Message routed and processed successfully</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
+
+</div>
+
