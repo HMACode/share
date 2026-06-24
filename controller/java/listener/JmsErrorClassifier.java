@@ -17,10 +17,12 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.Predicate;
 
 import javax.jms.JMSException;
+import javax.transaction.xa.XAException;
 
 import org.springframework.dao.NonTransientDataAccessException;
 import org.springframework.dao.RecoverableDataAccessException;
@@ -87,6 +89,36 @@ public class JmsErrorClassifier {
             ORA_CHILD_RECORD_FOUND, ORA_VALUE_TOO_LARGE_FOR_COLUMN, ORA_INVALID_IDENTIFIER,
             ORA_TABLE_OR_VIEW_NOT_FOUND, ORA_MISSING_EXPRESSION, ORA_INCONSISTENT_DATATYPES);
 
+    // WebLogic / JTA exception types (matched by class name so we keep no WebLogic compile dependency).
+    // These are all "infrastructure temporarily down" conditions and are treated as transient.
+    private static final String[] TRANSIENT_CLASS_MARKERS = {
+            "weblogic.common.resourcepool.ResourceLimitException", // JDBC / XA connection pool exhausted
+            "weblogic.jms.common.ResourceAllocationException",     // target JMS server out of resources
+            "weblogic.messaging.dispatcher.DispatcherException",   // target JMS server unreachable
+            "weblogic.jms.dispatcher.DispatcherException",
+            "weblogic.rjvm.PeerGoneException",                     // remote JMS/JTA peer gone
+            "RollbackException"                                    // javax/weblogic transaction RollbackException
+    };
+
+    // Substrings (matched case-insensitively against the exception message) for the same conditions.
+    private static final String[] TRANSIENT_MESSAGE_MARKERS = {
+            "no resources currently available in pool",            // WebLogic JDBC/XA pool full
+            "connection pool",
+            "pool is suspended",
+            "max capacity",
+            "is unavailable",                                      // e.g. XAResource 'WLStore_...' is unavailable
+            "resource manager is unavailable",                    // XAER_RMFAIL text
+            "already rolled back",                                // transaction already rolled back
+            "already been rolled back",
+            "transaction has been rolled back",
+            "could not connect",                                  // target JMS server unavailable
+            "peer gone",
+            "unreachable",
+            "no longer available",
+            "being shut down",
+            "is being shutdown"
+    };
+
     private final List<Predicate<Throwable>> extraTransient;
     private final List<Predicate<Throwable>> extraPermanent;
 
@@ -129,6 +161,10 @@ public class JmsErrorClassifier {
             return true;
         }
 
+        if (isTransientInfrastructure(t)) {
+            return true;
+        }
+
         if (t instanceof SQLTransientException
                 || t instanceof SQLRecoverableException
                 || t instanceof SQLTimeoutException) {
@@ -164,6 +200,47 @@ public class JmsErrorClassifier {
         }
 
         return false;
+    }
+
+    // WebLogic JTA/XA and WebLogic-JMS (jmsTemplate send target) failures that should be retried.
+    private boolean isTransientInfrastructure(Throwable t) {
+        if (t instanceof XAException && isTransientXaCode(((XAException) t).errorCode)) {
+            return true;
+        }
+
+        String className = t.getClass().getName();
+        for (String marker : TRANSIENT_CLASS_MARKERS) {
+            if (className.contains(marker)) {
+                return true;
+            }
+        }
+
+        String message = t.getMessage();
+        if (message != null) {
+            String lower = message.toLowerCase(Locale.ROOT);
+            for (String marker : TRANSIENT_MESSAGE_MARKERS) {
+                if (lower.contains(marker)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isTransientXaCode(int code) {
+        switch (code) {
+            case XAException.XAER_RMFAIL:    // resource manager unavailable
+            case XAException.XAER_RMERR:     // unexpected resource manager error
+            case XAException.XAER_NOTA:      // XID no longer known, transaction already completed
+            case XAException.XA_RETRY:       // routine returned with no effect, may be retried
+            case XAException.XA_RBCOMMFAIL:  // rollback: communication failure
+            case XAException.XA_RBTIMEOUT:   // rollback: transaction timed out
+            case XAException.XA_RBTRANSIENT: // rollback: transient failure
+                return true;
+            default:
+                return false;
+        }
     }
 
     private boolean isPermanent(Throwable t) {
