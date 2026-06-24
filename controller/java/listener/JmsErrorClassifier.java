@@ -1,6 +1,5 @@
 package com.example.mqretry;
 
-import java.lang.reflect.Method;
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
@@ -21,13 +20,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import javax.jms.IllegalStateException;
-import javax.jms.InvalidDestinationException;
-import javax.jms.InvalidSelectorException;
 import javax.jms.JMSException;
-import javax.jms.JMSSecurityException;
-import javax.jms.MessageFormatException;
-import javax.jms.MessageNotWriteableException;
 
 import org.springframework.dao.NonTransientDataAccessException;
 import org.springframework.dao.RecoverableDataAccessException;
@@ -37,45 +30,62 @@ import org.springframework.jms.support.converter.MessageConversionException;
 
 public class JmsErrorClassifier {
 
-    private static final int MQRC_CONNECTION_BROKEN = 2009;
-    private static final int MQRC_Q_MGR_NOT_AVAILABLE = 2059;
-    private static final int MQRC_Q_MGR_QUIESCING = 2161;
-    private static final int MQRC_Q_MGR_STOPPING = 2162;
-    private static final int MQRC_CONNECTION_QUIESCING = 2202;
-    private static final int MQRC_CONNECTION_STOPPING = 2203;
-    private static final int MQRC_CONNECTION_NOT_AVAILABLE = 2568;
-    private static final int MQRC_HOST_NOT_AVAILABLE = 2538;
-    private static final int MQRC_CHANNEL_NOT_AVAILABLE = 2537;
-    private static final int MQRC_Q_FULL = 2053;
-    private static final int MQRC_PUT_INHIBITED = 2051;
-    private static final int MQRC_GET_INHIBITED = 2016;
-    private static final int MQRC_STORAGE_NOT_AVAILABLE = 2071;
-    private static final int MQRC_RESOURCE_PROBLEM = 2102;
-    private static final int MQRC_UNEXPECTED_ERROR = 2195;
-    private static final int MQRC_RECONNECTING = 2544;
+    // Transient Oracle server (ORA-) errors: availability, resource and connectivity problems.
+    private static final int ORA_MAX_SESSIONS_EXCEEDED = 18;
+    private static final int ORA_MAX_PROCESSES_EXCEEDED = 20;
+    private static final int ORA_RESOURCE_BUSY = 54;
+    private static final int ORA_DEADLOCK_DETECTED = 60;
+    private static final int ORA_INIT_OR_SHUTDOWN_IN_PROGRESS = 1033;
+    private static final int ORA_NOT_AVAILABLE = 1034;
+    private static final int ORA_IMMEDIATE_SHUTDOWN_IN_PROGRESS = 1089;
+    private static final int ORA_END_OF_FILE_ON_CHANNEL = 3113;
+    private static final int ORA_NOT_CONNECTED = 3114;
+    private static final int ORA_CONNECTION_LOST_CONTACT = 3135;
+    private static final int ORA_CANNOT_SERIALIZE_ACCESS = 8177;
+    private static final int ORA_TNS_CONNECT_TIMEOUT = 12170;
+    private static final int ORA_TNS_NO_MATCHING_HANDLER = 12516;
+    private static final int ORA_TNS_NO_APPROPRIATE_HANDLER = 12519;
+    private static final int ORA_TNS_NO_HANDLER_FOR_SERVER = 12520;
+    private static final int ORA_TNS_CONNECTION_CLOSED = 12537;
+    private static final int ORA_TNS_NO_LISTENER = 12541;
 
-    private static final int MQRC_NOT_AUTHORIZED = 2035;
-    private static final int MQRC_UNKNOWN_OBJECT_NAME = 2085;
-    private static final int MQRC_UNKNOWN_REMOTE_Q_MGR = 2087;
+    // Transient Oracle JDBC driver (vendor) error codes.
+    private static final int JDBC_IO_ERROR = 17002;
+    private static final int JDBC_CONNECTION_CLOSED = 17008;
+    private static final int JDBC_NO_MORE_DATA_FROM_SOCKET = 17410;
 
-    private static final Set<Integer> TRANSIENT_MQ = unmodifiableSet(
-            MQRC_CONNECTION_BROKEN, MQRC_Q_MGR_NOT_AVAILABLE, MQRC_Q_MGR_QUIESCING,
-            MQRC_Q_MGR_STOPPING, MQRC_CONNECTION_QUIESCING, MQRC_CONNECTION_STOPPING,
-            MQRC_CONNECTION_NOT_AVAILABLE, MQRC_HOST_NOT_AVAILABLE, MQRC_CHANNEL_NOT_AVAILABLE,
-            MQRC_Q_FULL, MQRC_PUT_INHIBITED, MQRC_GET_INHIBITED, MQRC_STORAGE_NOT_AVAILABLE,
-            MQRC_RESOURCE_PROBLEM, MQRC_UNEXPECTED_ERROR, MQRC_RECONNECTING);
-
-    private static final Set<Integer> PERMANENT_MQ = unmodifiableSet(
-            MQRC_NOT_AUTHORIZED, MQRC_UNKNOWN_OBJECT_NAME, MQRC_UNKNOWN_REMOTE_Q_MGR);
+    // Permanent Oracle (ORA-) errors: constraint, data and schema problems that will not heal on retry.
+    private static final int ORA_UNIQUE_CONSTRAINT_VIOLATED = 1;
+    private static final int ORA_CANNOT_INSERT_NULL = 1400;
+    private static final int ORA_INSERTED_VALUE_TOO_LARGE = 1401;
+    private static final int ORA_CANNOT_UPDATE_TO_NULL = 1407;
+    private static final int ORA_VALUE_LARGER_THAN_PRECISION = 1438;
+    private static final int ORA_INVALID_NUMBER = 1722;
+    private static final int ORA_NON_NUMERIC_CHARACTER = 1858;
+    private static final int ORA_CHECK_CONSTRAINT_VIOLATED = 2290;
+    private static final int ORA_PARENT_KEY_NOT_FOUND = 2291;
+    private static final int ORA_CHILD_RECORD_FOUND = 2292;
+    private static final int ORA_VALUE_TOO_LARGE_FOR_COLUMN = 12899;
+    private static final int ORA_INVALID_IDENTIFIER = 904;
+    private static final int ORA_TABLE_OR_VIEW_NOT_FOUND = 942;
+    private static final int ORA_MISSING_EXPRESSION = 936;
+    private static final int ORA_INCONSISTENT_DATATYPES = 932;
 
     private static final Set<Integer> TRANSIENT_ORACLE = unmodifiableSet(
-            18, 20, 54, 60, 1033, 1034, 1089, 3113, 3114, 3135,
-            8177, 12170, 12516, 12519, 12520, 12537, 12541,
-            17002, 17008, 17410);
+            ORA_MAX_SESSIONS_EXCEEDED, ORA_MAX_PROCESSES_EXCEEDED, ORA_RESOURCE_BUSY,
+            ORA_DEADLOCK_DETECTED, ORA_INIT_OR_SHUTDOWN_IN_PROGRESS, ORA_NOT_AVAILABLE,
+            ORA_IMMEDIATE_SHUTDOWN_IN_PROGRESS, ORA_END_OF_FILE_ON_CHANNEL, ORA_NOT_CONNECTED,
+            ORA_CONNECTION_LOST_CONTACT, ORA_CANNOT_SERIALIZE_ACCESS, ORA_TNS_CONNECT_TIMEOUT,
+            ORA_TNS_NO_MATCHING_HANDLER, ORA_TNS_NO_APPROPRIATE_HANDLER, ORA_TNS_NO_HANDLER_FOR_SERVER,
+            ORA_TNS_CONNECTION_CLOSED, ORA_TNS_NO_LISTENER,
+            JDBC_IO_ERROR, JDBC_CONNECTION_CLOSED, JDBC_NO_MORE_DATA_FROM_SOCKET);
 
     private static final Set<Integer> PERMANENT_ORACLE = unmodifiableSet(
-            1, 1400, 1401, 1407, 1438, 1722, 1858, 2290, 2291, 2292,
-            12899, 904, 942, 936, 932);
+            ORA_UNIQUE_CONSTRAINT_VIOLATED, ORA_CANNOT_INSERT_NULL, ORA_INSERTED_VALUE_TOO_LARGE,
+            ORA_CANNOT_UPDATE_TO_NULL, ORA_VALUE_LARGER_THAN_PRECISION, ORA_INVALID_NUMBER,
+            ORA_NON_NUMERIC_CHARACTER, ORA_CHECK_CONSTRAINT_VIOLATED, ORA_PARENT_KEY_NOT_FOUND,
+            ORA_CHILD_RECORD_FOUND, ORA_VALUE_TOO_LARGE_FOR_COLUMN, ORA_INVALID_IDENTIFIER,
+            ORA_TABLE_OR_VIEW_NOT_FOUND, ORA_MISSING_EXPRESSION, ORA_INCONSISTENT_DATATYPES);
 
     private final List<Predicate<Throwable>> extraTransient;
     private final List<Predicate<Throwable>> extraPermanent;
@@ -93,17 +103,8 @@ public class JmsErrorClassifier {
     public RetryDecision classify(Throwable root) {
         List<Throwable> chain = flatten(root);
 
-        boolean permanentMqPresent = false;
         for (Throwable t : chain) {
-            Integer reason = mqReason(t);
-            if (reason != null && PERMANENT_MQ.contains(reason)) {
-                permanentMqPresent = true;
-                break;
-            }
-        }
-
-        for (Throwable t : chain) {
-            if (isTransient(t, permanentMqPresent)) {
+            if (isTransient(t)) {
                 return RetryDecision.TRANSIENT;
             }
         }
@@ -117,7 +118,7 @@ public class JmsErrorClassifier {
         return RetryDecision.UNKNOWN;
     }
 
-    private boolean isTransient(Throwable t, boolean permanentMqPresent) {
+    private boolean isTransient(Throwable t) {
         for (Predicate<Throwable> p : extraTransient) {
             if (p.test(t)) {
                 return true;
@@ -125,11 +126,6 @@ public class JmsErrorClassifier {
         }
 
         if (t instanceof RetryableMessageException) {
-            return true;
-        }
-
-        Integer reason = mqReason(t);
-        if (reason != null && TRANSIENT_MQ.contains(reason)) {
             return true;
         }
 
@@ -167,14 +163,6 @@ public class JmsErrorClassifier {
             return true;
         }
 
-        if (t instanceof IllegalStateException) {
-            return true;
-        }
-
-        if (t instanceof JMSException && !isPermanentJms(t) && !permanentMqPresent) {
-            return true;
-        }
-
         return false;
     }
 
@@ -186,15 +174,6 @@ public class JmsErrorClassifier {
         }
 
         if (t instanceof NonRecoverableMessageException) {
-            return true;
-        }
-
-        if (isPermanentJms(t)) {
-            return true;
-        }
-
-        Integer reason = mqReason(t);
-        if (reason != null && PERMANENT_MQ.contains(reason)) {
             return true;
         }
 
@@ -226,29 +205,6 @@ public class JmsErrorClassifier {
         }
 
         return false;
-    }
-
-    private boolean isPermanentJms(Throwable t) {
-        return t instanceof MessageFormatException
-                || t instanceof MessageNotWriteableException
-                || t instanceof InvalidDestinationException
-                || t instanceof InvalidSelectorException
-                || t instanceof JMSSecurityException;
-    }
-
-    private Integer mqReason(Throwable t) {
-        if (t == null || !t.getClass().getName().startsWith("com.ibm.")) {
-            return null;
-        }
-        try {
-            Method m = t.getClass().getMethod("getReason");
-            Object value = m.invoke(t);
-            if (value instanceof Integer) {
-                return (Integer) value;
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
     }
 
     private List<Throwable> flatten(Throwable root) {

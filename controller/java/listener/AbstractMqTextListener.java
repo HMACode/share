@@ -32,58 +32,33 @@ public abstract class AbstractMqTextListener implements MessageListener {
         }
 
         TextMessage textMessage = (TextMessage) message;
-        int unknownAttempts = 0;
+        String payload = null;
+        try {
+            payload = textMessage.getText();
+            handle(textMessage, payload);
+        } catch (Throwable ex) {
+            RetryDecision decision = classifier.classify(ex);
 
-        while (true) {
-            String payload = null;
-            try {
-                payload = textMessage.getText();
-                handle(textMessage, payload);
+            if (decision == RetryDecision.NON_RECOVERABLE) {
+                log.error("Dropping non-recoverable message: id={}, payload={}",
+                        messageId(textMessage), payload, ex);
                 return;
-            } catch (Throwable ex) {
-                RetryDecision decision = classifier.classify(ex);
-
-                if (decision == RetryDecision.TRANSIENT) {
-                    requeueOrDrop(textMessage, payload, ex);
-                    return;
-                }
-
-                if (decision == RetryDecision.NON_RECOVERABLE) {
-                    log.error("Dropping non-recoverable message: id={}, payload={}",
-                            messageId(textMessage), payload, ex);
-                    return;
-                }
-
-                unknownAttempts++;
-                if (unknownAttempts >= properties.getUnknownMaxAttempts()) {
-                    log.error("Dropping message after {} unknown-error attempts: id={}, payload={}",
-                            unknownAttempts, messageId(textMessage), payload, ex);
-                    return;
-                }
-                log.warn("Unknown error, in-thread retry {}/{}: id={}",
-                        unknownAttempts, properties.getUnknownMaxAttempts(), messageId(textMessage), ex);
             }
+
+            requeueOrDrop(textMessage, payload, decision, ex);
         }
     }
 
-    private void requeueOrDrop(TextMessage message, String payload, Throwable ex) {
+    private void requeueOrDrop(TextMessage message, String payload, RetryDecision decision, Throwable ex) {
         int delivery = deliveryCount(message);
-        if (delivery >= properties.getTransientMaxDeliveries()) {
-            log.error("Dropping transient message at safety limit (delivery={}, max={}): id={}, payload={}",
-                    delivery, properties.getTransientMaxDeliveries(), messageId(message), payload, ex);
+        if (delivery >= properties.getMaxDeliveries()) {
+            log.error("Dropping message at delivery safety limit (delivery={}, max={}, decision={}): id={}, payload={}",
+                    delivery, properties.getMaxDeliveries(), decision, messageId(message), payload, ex);
             return;
         }
-        long delay = backoffMillis(delivery);
-        log.warn("Transient error, requeue after {}ms (delivery={}): id={}",
-                delay, delivery, messageId(message), ex);
-        sleep(delay);
-        throw new RequeueException("Transient failure, forcing redelivery", ex);
-    }
-
-    private long backoffMillis(int delivery) {
-        int exponent = Math.max(0, delivery - 1);
-        double delay = properties.getInitialDelayMs() * Math.pow(properties.getMultiplier(), exponent);
-        return (long) Math.min(delay, properties.getMaxDelayMs());
+        log.warn("{} error, letting IBM MQ redeliver (delivery={}): id={}",
+                decision, delivery, messageId(message), ex);
+        throw new RequeueException("Recoverable failure, forcing IBM MQ redelivery", ex);
     }
 
     private int deliveryCount(Message message) {
@@ -101,17 +76,6 @@ public abstract class AbstractMqTextListener implements MessageListener {
             return message == null ? "null" : message.getJMSMessageID();
         } catch (JMSException e) {
             return "unknown";
-        }
-    }
-
-    private void sleep(long millis) {
-        if (millis <= 0) {
-            return;
-        }
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
         }
     }
 }
