@@ -52,13 +52,34 @@ public abstract class AbstractMqTextListener implements MessageListener {
     private void requeueOrDrop(TextMessage message, String payload, RetryDecision decision, Throwable ex) {
         int delivery = deliveryCount(message);
         if (delivery >= properties.getMaxDeliveries()) {
-            log.error("Dropping message at delivery safety limit (delivery={}, max={}, decision={}): id={}, payload={}",
+            log.error("Dropping message at retry limit (delivery={}, max={}, decision={}): id={}, payload={}",
                     delivery, properties.getMaxDeliveries(), decision, messageId(message), payload, ex);
             return;
         }
-        log.warn("{} error, letting IBM MQ redeliver (delivery={}): id={}",
-                decision, delivery, messageId(message), ex);
+        long delay = backoffMillis(delivery);
+        log.warn("{} error, sleeping {}ms then letting IBM MQ redeliver (delivery={}): id={}",
+                decision, delay, delivery, messageId(message), ex);
+        sleep(delay);
         throw new RequeueException("Recoverable failure, forcing IBM MQ redelivery", ex);
+    }
+
+    /** Exponential backoff: 1, 2, 4, 8 seconds, then capped at maxBackoffSeconds (1, 2, 4, 8, 10, 10, ...). */
+    private long backoffMillis(int delivery) {
+        int exponent = Math.max(0, delivery - 1);
+        long seconds = exponent >= 31 ? properties.getMaxBackoffSeconds()
+                : Math.min(1L << exponent, properties.getMaxBackoffSeconds());
+        return seconds * 1000L;
+    }
+
+    private void sleep(long millis) {
+        if (millis <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private int deliveryCount(Message message) {
