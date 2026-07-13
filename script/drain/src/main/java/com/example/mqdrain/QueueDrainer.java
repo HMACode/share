@@ -109,13 +109,33 @@ public class QueueDrainer {
     }
 
     private void scanAllQueues() throws JMSException {
+        JMSException lastError = null;
+        int failures = 0;
         for (String queueName : queueNames) {
-            int drained = drainQueue(queueName);
-            if (drained > 0) {
-                LOG.info("Drained " + drained + " message(s) from queue [" + queueName + "]");
-            } else {
-                LOG.fine("Queue [" + queueName + "] is empty");
+            try {
+                int drained = drainQueue(queueName);
+                if (drained > 0) {
+                    LOG.info("Drained " + drained + " message(s) from queue [" + queueName + "]");
+                } else {
+                    LOG.fine("Queue [" + queueName + "] is empty");
+                }
+            } catch (JMSException e) {
+                // A queue-level problem (e.g. MQRC 2045 on a remote/alias queue,
+                // 2035 not authorized, 2085 unknown queue) should not stop the
+                // scan of the remaining queues.
+                failures++;
+                lastError = e;
+                LOG.warning("Cannot drain queue [" + queueName + "]: " + e.getMessage());
+            } catch (RuntimeException e) {
+                // e.g. JNDI lookup failure for one queue.
+                failures++;
+                LOG.warning("Cannot drain queue [" + queueName + "]: " + e.getMessage());
             }
+        }
+        // If every queue failed the connection itself is probably broken;
+        // propagate so the outer loop reconnects.
+        if (failures == queueNames.size() && lastError != null) {
+            throw lastError;
         }
     }
 
