@@ -1,0 +1,75 @@
+<p-toast></p-toast>
+<p-confirmDialog [style]="{ width: '24rem' }"></p-confirmDialog>
+
+<div class="page">
+  <div class="page-header">
+    <h2>Batch Message Injection</h2>
+    <button pButton type="button" label="New Batch" icon="pi pi-plus" (click)="openCreate()"></button>
+  </div>
+
+  <p-table [value]="batches" [loading]="loading" dataKey="id" responsiveLayout="stack" breakpoint="960px" styleClass="p-datatable-sm">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Created</th>
+        <th>Total messages</th>
+        <th>MT emission</th>
+        <th>MT reception</th>
+        <th>MX emission</th>
+        <th>MX reception</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-batch>
+      <tr>
+        <td><span class="p-column-title">Created</span>{{ batch.creationDate | date: 'dd/MM/yyyy HH:mm' }}</td>
+        <td><span class="p-column-title">Total messages</span><strong>{{ batch.totalMessages }}</strong></td>
+        <td><span class="p-column-title">MT emission</span>{{ batch.mtEmission }}</td>
+        <td><span class="p-column-title">MT reception</span>{{ batch.mtReception }}</td>
+        <td><span class="p-column-title">MX emission</span>{{ batch.mxEmission }}</td>
+        <td><span class="p-column-title">MX reception</span>{{ batch.mxReception }}</td>
+        <td>
+          <span class="p-column-title">Status</span>
+          <div class="status-cell">
+            <p-tag [value]="batch.status" [severity]="statusSeverity(batch.status)"></p-tag>
+            <p-progressBar *ngIf="batch.status === 'RUNNING'" [value]="batch.progress" [showValue]="true" [style]="{ height: '1rem', minWidth: '8rem' }"></p-progressBar>
+          </div>
+        </td>
+        <td>
+          <div class="actions">
+            <button pButton type="button" icon="pi pi-play" class="p-button-rounded p-button-text p-button-success" pTooltip="Start injection" *ngIf="batch.status !== 'RUNNING'" (click)="start(batch)"></button>
+            <button pButton type="button" icon="pi pi-stop" class="p-button-rounded p-button-text p-button-warning" pTooltip="Stop injection" *ngIf="batch.status === 'RUNNING'" (click)="stop(batch)"></button>
+            <button pButton type="button" icon="pi pi-download" class="p-button-rounded p-button-text" pTooltip="Download batch" (click)="download(batch)"></button>
+            <button pButton type="button" icon="pi pi-trash" class="p-button-rounded p-button-text p-button-danger" pTooltip="Delete batch" [disabled]="batch.status === 'RUNNING'" (click)="confirmDelete(batch)"></button>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="8">No batches available.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<p-dialog header="New Batch" [(visible)]="createVisible" [modal]="true" [draggable]="false" [style]="{ width: '30rem' }" [breakpoints]="{ '640px': '95vw' }">
+  <p-tabView>
+    <p-tabPanel header="From date range">
+      <div class="p-fluid">
+        <div class="p-field">
+          <label for="startDate">Start date</label>
+          <p-calendar inputId="startDate" [(ngModel)]="startDate" [showTime]="true" [showIcon]="true" dateFormat="dd/mm/yy" appendTo="body"></p-calendar>
+        </div>
+        <div class="p-field">
+          <label for="endDate">End date</label>
+          <p-calendar inputId="endDate" [(ngModel)]="endDate" [showTime]="true" [showIcon]="true" dateFormat="dd/mm/yy" [minDate]="startDate" appendTo="body"></p-calendar>
+        </div>
+        <button pButton type="button" label="Create batch" icon="pi pi-check" [disabled]="!startDate || !endDate" [loading]="creating" (click)="createFromDates()"></button>
+      </div>
+    </p-tabPanel>
+    <p-tabPanel header="From file">
+      <p-fileUpload mode="basic" [customUpload]="true" [auto]="true" accept=".zip,.gz,.tar" chooseLabel="Select batch file" chooseIcon="pi pi-upload" [disabled]="creating" (uploadHandler)="onUpload($event)"></p-fileUpload>
+    </p-tabPanel>
+  </p-tabView>
+</p-dialog>
